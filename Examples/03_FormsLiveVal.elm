@@ -6,7 +6,6 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import List
 import String
-import Tuple
 
 
 main : Program Never Model Msg
