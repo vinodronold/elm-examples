@@ -21,18 +21,20 @@ main =
 type Msg
     = SearchText String
     | FetchResult
-    | FetchResultComplete (Result Http.Error YTResult)
+    | FetchResultComplete (Result Http.Error (List YTItem))
 
 
 type alias YTItem =
     { id : String
     , imgUrl : String
     , title : String
+    , description : String
     }
 
 
-type alias YTResult =
-    List YTItem
+type YTResult
+    = Results (List YTItem)
+    | Loading
 
 
 
@@ -51,7 +53,7 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "" [], Cmd.none )
+    ( Model "" (Results []), Cmd.none )
 
 
 
@@ -65,10 +67,10 @@ update msg model =
             ( { model | search = text }, Cmd.none )
 
         FetchResult ->
-            ( { model | result = [] }, fetchYTResult model.search )
+            ( { model | result = Loading }, fetchYTResult model.search )
 
         FetchResultComplete (Ok ytSearchResult) ->
-            ( { model | result = ytSearchResult }, Cmd.none )
+            ( { model | result = Results ytSearchResult }, Cmd.none )
 
         FetchResultComplete (Err _) ->
             ( model, Cmd.none )
@@ -90,7 +92,7 @@ fetchYTResult searchText =
     Http.send FetchResultComplete request
 
 
-decodeYTUrl : Decode.Decoder YTResult
+decodeYTUrl : Decode.Decoder (List YTItem)
 decodeYTUrl =
     decodeYTItem
         |> Decode.list
@@ -109,10 +111,11 @@ decodeYTUrl =
 
 decodeYTItem : Decode.Decoder YTItem
 decodeYTItem =
-    Decode.map3 YTItem
+    Decode.map4 YTItem
         (Decode.at [ "id", "videoId" ] Decode.string)
         (Decode.at [ "snippet", "thumbnails", "default", "url" ] Decode.string)
         (Decode.at [ "snippet", "title" ] Decode.string)
+        (Decode.at [ "snippet", "description" ] Decode.string)
 
 
 
@@ -165,23 +168,33 @@ view model =
 displayResult : Model -> Html Msg
 displayResult model =
     case model.result of
-        [] ->
-            div [] [ text "Nothing is display" ]
+        Loading ->
+            div [] [ text "Loading . . . " ]
 
-        xs ->
-            ul [ style styleDisplaResultUL ]
-                (List.map displayItem xs)
+        Results results ->
+            case results of
+                [] ->
+                    div [] [ text "Nothing is display" ]
+
+                xs ->
+                    ul [ style styleDisplaResultUL ]
+                        (List.map displayItem xs)
 
 
 displayItem : YTItem -> Html Msg
-displayItem { id, imgUrl, title } =
+displayItem { id, imgUrl, title, description } =
     li [ style [ ( "padding", "10px" ) ] ]
-        [ a [ href id, style [ ( "display", "flex" ) ] ]
-            [ div []
+        [ a
+            [ href <| "https://www.youtube.com/watch?v=" ++ id
+            , target "_blank"
+            , style styleLink
+            ]
+            [ div [ style [ ( "padding-right", "10px" ) ] ]
                 [ img [ src imgUrl ] []
                 ]
             , div []
-                [ text title
+                [ div [ style [ ( "font-size", "24px" ) ] ] [ text title ]
+                , div [ style [ ( "font-size", "12px" ) ] ] [ text description ]
                 ]
             ]
         ]
@@ -207,7 +220,7 @@ type alias StyleAttributes =
 styleHeader : StyleAttributes
 styleHeader =
     [ ( "font-size", "48px" )
-    , ( "color", "#4b4b4b" )
+    , ( "color", "#5b5b5b" )
     ]
 
 
@@ -235,7 +248,7 @@ styleSearchInput =
     , ( "border", "none" )
     , ( "border-bottom", "solid 3px tomato" )
     , ( "outline", "none" )
-    , ( "color", "#6b6b6b" )
+    , ( "color", "#5b5b5b" )
     ]
 
 
@@ -260,4 +273,13 @@ styleDisplaResultUL =
     , ( "text-align", "left" )
     , ( "margin", "0" )
     , ( "padding", "0" )
+    ]
+
+
+styleLink : StyleAttributes
+styleLink =
+    [ ( "display", "flex" )
+    , ( "align-items", "center" )
+    , ( "text-decoration", "none" )
+    , ( "color", "#5b5b5b" )
     ]
