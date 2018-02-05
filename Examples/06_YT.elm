@@ -32,7 +32,7 @@ type alias YTItem =
 
 
 type alias YTResult =
-    Maybe (List YTItem)
+    List YTItem
 
 
 
@@ -51,7 +51,7 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "" Nothing, Cmd.none )
+    ( Model "" [], Cmd.none )
 
 
 
@@ -65,7 +65,7 @@ update msg model =
             ( { model | search = text }, Cmd.none )
 
         FetchResult ->
-            ( { model | result = Nothing }, fetchYTResult model.search )
+            ( { model | result = [] }, fetchYTResult model.search )
 
         FetchResultComplete (Ok ytSearchResult) ->
             ( { model | result = ytSearchResult }, Cmd.none )
@@ -75,14 +75,14 @@ update msg model =
 
 
 
--- Tasks
+-- Decoders
 
 
 fetchYTResult : String -> Cmd Msg
 fetchYTResult searchText =
     let
         ytApiUrl =
-            "https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=25&q=" ++ searchText ++ "&key=AIzaSyDt03O45GRK2doERZICfzCgUbeXVFtLpiY"
+            "https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=25&type=video&q=" ++ searchText ++ "&key=AIzaSyDt03O45GRK2doERZICfzCgUbeXVFtLpiY"
 
         request =
             Http.get ytApiUrl decodeYTUrl
@@ -92,16 +92,27 @@ fetchYTResult searchText =
 
 decodeYTUrl : Decode.Decoder YTResult
 decodeYTUrl =
-    Decode.field "items"
-        (Decode.maybe
-            (Decode.list
-                (Decode.map3 YTItem
-                    (Decode.at [ "id", "videoId" ] Decode.string)
-                    (Decode.at [ "snippet", "thumbnails", "default", "url" ] Decode.string)
-                    (Decode.at [ "snippet", "title" ] Decode.string)
-                )
-            )
-        )
+    decodeYTItem
+        |> Decode.list
+        |> Decode.field "items"
+
+
+
+-- decodeYTUrl =
+--     Decode.field "items"
+--         (Decode.maybe
+--             (Decode.list
+--                 decodeYTItem
+--             )
+--         )
+
+
+decodeYTItem : Decode.Decoder YTItem
+decodeYTItem =
+    Decode.map3 YTItem
+        (Decode.at [ "id", "videoId" ] Decode.string)
+        (Decode.at [ "snippet", "thumbnails", "default", "url" ] Decode.string)
+        (Decode.at [ "snippet", "title" ] Decode.string)
 
 
 
@@ -147,19 +158,33 @@ view model =
             [ input [ style styleSearchInput, placeholder "Search", value model.search, onInput SearchText ] []
             , button [ style styleButton, onClick FetchResult ] [ text "Search" ]
             ]
-        , div [] [ displayResult model ]
+        , div [ style [ ( "margin", "0 12.5%" ) ] ] [ displayResult model ]
         ]
 
 
 displayResult : Model -> Html Msg
 displayResult model =
     case model.result of
-        Nothing ->
+        [] ->
             div [] [ text "Nothing is display" ]
 
-        Just xs ->
+        xs ->
             ul [ style styleDisplaResultUL ]
-                (List.map (\x -> li [] [ text x.title ]) xs)
+                (List.map displayItem xs)
+
+
+displayItem : YTItem -> Html Msg
+displayItem { id, imgUrl, title } =
+    li [ style [ ( "padding", "10px" ) ] ]
+        [ a [ href id, style [ ( "display", "flex" ) ] ]
+            [ div []
+                [ img [ src imgUrl ] []
+                ]
+            , div []
+                [ text title
+                ]
+            ]
+        ]
 
 
 
@@ -230,5 +255,9 @@ styleButton =
 styleDisplaResultUL : StyleAttributes
 styleDisplaResultUL =
     [ ( "list-style-type", "none" )
-    , ( "width", "75%" )
+    , ( "display", "flex" )
+    , ( "flex-direction", "column" )
+    , ( "text-align", "left" )
+    , ( "margin", "0" )
+    , ( "padding", "0" )
     ]
