@@ -29,10 +29,9 @@ type alias Model =
 
 
 type YTResult
-    = NotAsked
-    | Loading
-    | Failure String
-    | Success YTItems
+    = Loading
+    | Results YTItems
+    | Error String
 
 
 type alias YTItems =
@@ -59,7 +58,7 @@ type Msg
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "" NotAsked, Cmd.none )
+    ( Model "" (Results []), Cmd.none )
 
 
 
@@ -76,10 +75,10 @@ update msg model =
             ( { model | result = Loading }, fetchYTResult model.search )
 
         FetchResultComplete (Ok ytSearchResult) ->
-            ( { model | result = Success ytSearchResult }, Cmd.none )
+            ( { model | result = Results ytSearchResult }, Cmd.none )
 
         FetchResultComplete (Err _) ->
-            ( { model | result = Failure "Oops.. Something went wrong.." }, Cmd.none )
+            ( { model | result = Error "Oops.. Something went wrong.." }, Cmd.none )
 
 
 
@@ -177,22 +176,19 @@ view model =
 displayResult : Model -> Html Msg
 displayResult model =
     case model.result of
-        NotAsked ->
-            div [] [ text "No Search Ran" ]
-
         Loading ->
             div [] [ text "Loading . . . " ]
 
-        Success results ->
+        Results results ->
             case results of
                 [] ->
-                    div [] [ text "Nothing is found" ]
+                    div [] [ text "Nothing is display" ]
 
                 xs ->
                     ul [ style styleDisplaResultUL ]
                         (List.map displayItem xs)
 
-        Failure err ->
+        Error err ->
             div [] [ text err ]
 
 
