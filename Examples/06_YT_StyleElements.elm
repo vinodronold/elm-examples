@@ -4,7 +4,7 @@ module Main exposing (..)
 -- import Html.Events exposing (onClick, onInput)
 
 import Color exposing (charcoal, darkOrange, rgba)
-import Element exposing (Element, button, column, el, empty, image, layout, paragraph, row, text)
+import Element exposing (Element, button, column, el, empty, image, layout, paragraph, row, text, within)
 import Element.Attributes exposing (center, inlineStyle, maxWidth, padding, paddingXY, percent, px, spacing, spread, verticalCenter, width)
 import Element.Events exposing (onClick)
 import Element.Input as Input
@@ -140,14 +140,14 @@ view model =
                 [ padding 10, spacing 10 ]
                 [ el Title [ center ] (text "YouTube Search")
                 , Input.text SearchInput
-                    [ center, width (percent 75) ]
+                    [ center, width (percent 75), inlineStyle [ ( "text-align", "center" ) ] ]
                     { onChange = SearchText
                     , value = model.search
                     , label = Input.hiddenLabel ""
                     , options = []
                     }
                 , el None [ center ] (button SearchButton [ paddingXY 10 5, onClick FetchResult ] (text "Search"))
-                , el None [ center ] (displayResult model)
+                , el None [ center, width (percent 75) ] (displayResult model)
                 ]
             )
 
@@ -167,7 +167,7 @@ displayResult model =
                     el None [ center ] (text "Nothing is found")
 
                 xs ->
-                    column None [ width (percent 75), spacing 15 ] (displayYTItems xs)
+                    column None [ spacing 15 ] (displayYTItems xs)
 
         Failure err ->
             el None [ center ] (text err)
@@ -216,7 +216,9 @@ stylesheet : Style.StyleSheet Styles variation
 stylesheet =
     styleSheet
         [ style None []
-        , style Container []
+        , style Container
+            [ Font.typeface <| Font.importUrl { url = "https://fonts.googleapis.com/css?family=Roboto", name = "Roboto" } :: []
+            ]
         , style SearchInput
             [ Border.bottom 3
             , Border.solid
